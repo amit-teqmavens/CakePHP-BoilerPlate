@@ -2,6 +2,7 @@
 // src/Controller/ArticlesController.php
 
 namespace App\Controller;
+use Cake\Http\Exception\NotFoundException;
 
 class ArticlesController extends AppController
 {
@@ -37,7 +38,13 @@ class ArticlesController extends AppController
 		//findBySlug() method allows us to create a basic query that finds articles by a given slug
 	    $article = $this->Articles
 	    		->findBySlug($slug)
-	    		->firstOrFail(); //uses firstOrFail() to either fetch the first record, or throw a NotFoundException.
+	    		->first(); 
+        
+        //if page not found, redirect back to list view
+        if(empty($article)) {
+            $this->Flash->error(__('Article not found'));
+            return $this->redirect(['action' => 'index']);
+        }             
 	    $this->set(compact('article')); 
 	}
 
@@ -48,20 +55,19 @@ class ArticlesController extends AppController
      */ 	
  	public function add()
     {
-        $article = $this->Articles->newEntity();
-        if ($this->request->is('post')) { // check if the request is a HTTP POST request.
-            $article = $this->Articles->patchEntity($article, $this->request->getData()); //POST data is available in $this->request->getData()
+            $methodType = 'add';
+            $model = 'Articles';
+            $redirectController = 'Articles';
+            $redirectAction = 'index';
+            $successMsg = 'You article has been saved.';
+            $errorMsg = 'Unable to add your article. Please, try again.';
+            $setVar = 'article';
+            $passLoggedinUserId = 'yes';
+            $sendEmail = 'no';
+            
+            // This is a common method add in AppController, used for adding/saving data into database, related to any form.
+            $this->autoSave($methodType, $model, $setVar, $redirectController, $redirectAction, $successMsg, $errorMsg, $passLoggedinUserId, $sendEmail);
 
-			// Set the user_id from the session.
-	        $article->user_id = $this->Auth->user('id');
-
-            if ($this->Articles->save($article)) {
-                $this->Flash->success(__('Your article has been saved.')); //Use FlashComponent’s success() method to set a message into the session.
-                return $this->redirect(['action' => 'index']);
-            }
-            $this->Flash->error(__('Unable to add your article.'));
-        }
-        $this->set('article', $article);
     }
 
     /**
@@ -73,15 +79,19 @@ class ArticlesController extends AppController
      */
     public function edit($slug)
 	{
-	    $article = $this->Articles
-	    		->findBySlug($slug)
-	    		->firstOrFail();
+        //findBySlug() method allows us to create a basic query that finds articles by a given slug
+        $article = $this->Articles
+                ->findBySlug($slug)
+                ->first(); 
+        
+        //if page not found, redirect back to list view
+        if(empty($article)) {
+            $this->Flash->error(__('Article not found'));
+            return $this->redirect(['action' => 'index']);
+        }
 
 	    if ($this->request->is(['post', 'put'])) {
-	        $this->Articles->patchEntity($article, $this->request->getData(), [
-            // Added: Disable modification of user_id.
-            'accessibleFields' => ['user_id' => false]
-        	]);
+	        $this->Articles->patchEntity($article, $this->request->getData());
 
 	        if ($this->Articles->save($article)) {
 	            $this->Flash->success(__('Your article has been updated.'));
@@ -100,18 +110,26 @@ class ArticlesController extends AppController
      * @return \Cake\Http\Response|null Redirects to index.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
-	public function delete($slug)
+	public function delete($id = null)
 	{
-	    $this->request->allowMethod(['post', 'delete']); //If the user attempts to delete an article using a GET request, allowMethod() will throw an exception. Allowing content to be deleted using GET requests is very dangerous,
+	    $this->request->allowMethod(['post', 'delete']); 
 
-	    $article = $this->Articles
-	    		->findBySlug($slug)
-	    		->firstOrFail();
+        $article = $this->Articles->get($id);
+        pr($article); die;
 
-	    if ($this->Articles->delete($article)) {
-	        $this->Flash->success(__('The {0} article has been deleted.', $article->title));
-	        return $this->redirect(['action' => 'index']);
-	    }
+        //if page not found, redirect back to list view
+        if(empty($article)) {
+            $this->Flash->error(__('Article not found'));
+            return $this->redirect(['action' => 'index']);
+        }
+
+        if ($this->Articles->delete($article)) {
+            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
+        } else {
+            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
+        }
+                    
+        return $this->redirect(['controller' => 'articles','action' => 'index']);        
 	}
 
 
@@ -124,22 +142,15 @@ class ArticlesController extends AppController
 	{
 	    $action = $this->request->getParam('action');
 	    // The add and tags actions are always allowed to logged in users.
-	    if (in_array($action, ['index','add', 'tags'])) {
+	    if (in_array($action, ['index','add', 'tags','delete'])) {
 	        return true;
 	    }
 
 	    // All other actions require a slug.
-	    $slug = $this->request->getParam('pass.0');
+	    /*$slug = $this->request->getParam('pass.0');
 	    if (!$slug) {
 	        return false;
-	    }
-
-	    // Check that the article belongs to the current user.
-	    $article = $this->Articles
-	    		->findBySlug($slug)
-	    		->first();
-
-	    return $article->user_id === $user['id'];
+	    }*/
 	}
 
 }

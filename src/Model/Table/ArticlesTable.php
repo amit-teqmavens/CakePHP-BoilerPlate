@@ -1,14 +1,10 @@
 <?php
-// src/Model/Table/ArticlesTable.php
 namespace App\Model\Table;
 
+use Cake\ORM\Query;
+use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
-
-// the Validator class
 use Cake\Validation\Validator;
-
-// the Text class
-use Cake\Utility\Text;
 
 class ArticlesTable extends Table
 {

@@ -4,6 +4,9 @@ namespace App\Controller;
 use App\Controller\AppController;
 use Cake\Core\Configure;
 use Cake\ORM\TableRegistry;
+use Cake\Core\Exception\Exception;
+use Cake\Network\Exception\NotFoundException;
+
 
 /**
  * Users Controller
@@ -18,8 +21,15 @@ class UsersController extends AppController
     {
         parent::initialize();
         // Add the action to the allowed actions list.
+
         $this->Auth->allow();
         $this->loadComponent('Common');
+
+        $action = $this->request->getParam('action');
+        // The add and tags actions are always allowed to logged in users.
+        if (in_array($action, ['add', 'roles'])) {
+            return true;
+        }
     }
 
      /**
@@ -30,8 +40,10 @@ class UsersController extends AppController
      */
     public function index()
     {
-        $users = $this->paginate($this->Users);
+
+        $users = $this->paginate($this->Users->find('all')->contain(['Roles']));
         $this->set(compact('users'));
+        $this->set('_serialize', ['users']);
 
         //check auth user or redirect to login
         if ($this->Auth->user()) {
@@ -50,9 +62,13 @@ class UsersController extends AppController
      */
     public function view($id = null)
     {
-        $user = $this->Users->get($id, [
-            'contain' => ['Articles']
-        ]);
+        $user = $this->Users->findById($id)->first();
+        
+        //if page not found, redirect back to list view
+        if (empty($user)) {
+            $this->Flash->error(__('User not found'));
+            return $this->redirect(['action' => 'index']);
+        }
 
         $this->set('user', $user);
     }
@@ -64,7 +80,9 @@ class UsersController extends AppController
      */
     public function add()
     {
-        $user = $this->Users->newEntity();
+
+
+        /*$user = $this->Users->newEntity();
         if ($this->request->is('post')) {
             $user = $this->Users->patchEntity($user, $this->request->getData());
             if ($this->Users->save($user)) {
@@ -75,6 +93,53 @@ class UsersController extends AppController
             $this->Flash->error(__('The user could not be saved. Please, try again.'));
         }
         $this->set(compact('user'));
+        */
+ 
+
+         // Get all roles from roles table and setting it for roles dropdown
+        $allRoles = $this->Users->getAllRoles();
+        $this->set(compact('allRoles')); 
+
+
+
+        $methodType = 'add';
+        $model = 'Users';
+        $redirectController = 'Users';
+        $redirectAction = 'index';
+        $successMsg = 'The user has been saved.';
+        $errorMsg = 'The user could not be saved. Please, try again.';
+        $setVar = 'user';
+        $passLoggedinUserId = 'no';
+
+        /****** set these variables if you want to send an email ******/
+        $sendEmail = 'yes';
+        $EmailCode = 'REG001';
+        $EmailSubject = 'Welcome to the Website';
+        /****** set these variables if you want to send an email ******/
+
+        // This is a common method add in AppController, used for adding/saving data into database, related to any form.
+        $response = $this->autoSave($methodType, $model, $setVar, $redirectController, $redirectAction, $successMsg, $errorMsg, $passLoggedinUserId, $sendEmail, $EmailCode, $EmailSubject);
+
+        //************Store data into associated table 'UserRoles' table************
+        if(isset($response) && $response!="") {
+                if(!empty($this->request->data['role'])){
+
+                    $userRolesTable = TableRegistry::get('UserRoles');
+                    $userData = $userRolesTable->newEntity();
+                    $userData['user_id'] = $response['id'];
+                    $userData['role_id'] = $response['role'];
+
+                    if($userRolesTable->save($userData)){
+                        $this->Flash->success(__($successMsg));                        
+                    }else {
+                        $this->Flash->error(__($errorMsg));
+                    }
+                    $this->redirect(['controller'=> $redirectController ,'action'=> $redirectAction]); 
+                }
+        }
+
+
+
     }
 
     /**
@@ -86,9 +151,19 @@ class UsersController extends AppController
      */
     public function edit($id = null)
     {
+        //$user = $this->Users->findById($id)->first();
+        //find data of selected user, from associated tables as well
         $user = $this->Users->get($id, [
-            'contain' => []
-        ]);
+                        'contain' => ['Roles']
+                    ]);
+
+
+        //if page not found, redirect back to list view
+        if (empty($user)) {
+            $this->Flash->error(__('User not found'));
+            return $this->redirect(['action' => 'index']);
+        }
+
         if ($this->request->is(['patch', 'post', 'put'])) {
             $user = $this->Users->patchEntity($user, $this->request->getData());
             if ($this->Users->save($user)) {
@@ -98,7 +173,15 @@ class UsersController extends AppController
             }
             $this->Flash->error(__('The user could not be saved. Please, try again.'));
         }
-        $this->set(compact('user'));
+
+         // Get all roles from roles table and setting it for roles dropdown
+        $allRoles = $this->Users->getAllRoles();
+        
+        //get the selected role id
+        $selectedRole = $user['roles'];
+
+
+        $this->set(compact('user','allRoles', 'selectedRole'));
     }
 
     /**
@@ -112,12 +195,18 @@ class UsersController extends AppController
     {
         $this->request->allowMethod(['post', 'delete']);
         $user = $this->Users->get($id);
-        if ($this->Users->delete($user)) {
-            $this->Flash->success(__('The user has been deleted.'));
-        } else {
-            $this->Flash->error(__('The user could not be deleted. Please, try again.'));
+ 
+        //if page not found, redirect back to list view
+        if (empty($user)) {
+            $this->Flash->error(__('User not found'));
+            return $this->redirect(['action' => 'index']);
         }
 
+        if ($this->Users->delete($user)) {
+            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
+        } else {
+            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
+        }
         return $this->redirect(['action' => 'index']);
     }
 
@@ -129,6 +218,7 @@ class UsersController extends AppController
      */
     public function login()
     {
+        $this->viewBuilder()->layout('login'); 
         if ($this->request->is('post')) {
             try {
                 $user = $this->Auth->identify();
@@ -143,7 +233,7 @@ class UsersController extends AppController
                             if($this->request->data['remember_me'] == "1") {
                                 $cookie = array();
                                 $cookie['remember_me']  = $this->request->data['remember_me'];
-                                $cookie['email']     = $this->request->data['username'];
+                                $cookie['email']     = $this->request->data['email'];
                                 $cookie['password']     = $this->request->data['password'];
                                 $this->Cookie->write('rememberMe', $cookie, true, "1 week");
                                 unset($this->request->data['remember_me']);
@@ -183,13 +273,18 @@ class UsersController extends AppController
      */
     public function register()
     {
+        $this->viewBuilder()->layout('login'); 
         $user = $this->Users->newEntity();
         if ($this->request->is('post')) {
             //Generating a random token for security
             $random_token  = $this->Common->generateRandomString(4);
             $this->request->data['token'] = md5($this->request->data['email'].$random_token);
             $user = $this->Users->patchEntity($user, $this->request->getData());
-            
+
+            $errors = $user->errors();        
+        //  pr($errors); die;
+           // $errors = $user->errors(); 
+          // pr($errors); dd('asdasdas'); 
             if($result = $this->Users->save($user)){
                                 
                 /******** Code for sending welcome email along with activation link*******/
@@ -204,11 +299,11 @@ class UsersController extends AppController
                     );
                     $toEmail = $result->email;
 
-                    $this->Common->sendEmail("REG002", $toEmail, $contentArray);    
+                    $this->Common->sendEmail("REG002", $toEmail, $contentArray);        
                 }   
                 /******** Code for sending welcome email along with activation link*******/
 
-                $this->Flash->success(__('The user has been saved.'));
+                $this->Flash->success(__('The user has been created.'));
 
                 return $this->redirect(['controller'=>'users','action'=>'login']);  
             }

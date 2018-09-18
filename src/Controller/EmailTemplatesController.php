@@ -2,6 +2,7 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
+use Cake\Http\Exception\NotFoundException;
 
 /**
  * EmailTemplates Controller
@@ -39,9 +40,13 @@ class EmailTemplatesController extends AppController
      */
     public function view($id = null)
     {
-        $emailTemplate = $this->EmailTemplates->get($id, [
-            'contain' => []
-        ]);
+        $emailTemplate = $this->EmailTemplates->findById($id)->first();
+        
+        //if page not found, redirect back to list view
+        if (empty($emailTemplate)) {
+            $this->Flash->error(__('Article not found'));
+            return $this->redirect(['action' => 'index']);
+        }
 
         $this->set('emailTemplate', $emailTemplate);
     }
@@ -53,7 +58,7 @@ class EmailTemplatesController extends AppController
      */
     public function add()
     {
-        $emailTemplate = $this->EmailTemplates->newEntity();
+ /*       $emailTemplate = $this->EmailTemplates->newEntity();
         if ($this->request->is('post')) {
             $emailTemplate = $this->EmailTemplates->patchEntity($emailTemplate, $this->request->getData());
             if ($this->EmailTemplates->save($emailTemplate)) {
@@ -64,6 +69,20 @@ class EmailTemplatesController extends AppController
             $this->Flash->error(__('The email template could not be saved. Please, try again.'));
         }
         $this->set(compact('emailTemplate'));
+
+*/
+            $methodType = 'add';
+            $model = 'EmailTemplates';
+            $redirectController = 'EmailTemplates';
+            $redirectAction = 'index';
+            $successMsg = 'The email template has been saved.';
+            $errorMsg = 'The email template could not be saved. Please, try again.';
+            $setVar = 'emailTemplate';
+            $passLoggedinUserId = 'no';
+            $sendEmail = 'no';
+            
+            // This is a common method add in AppController, used for adding/saving data into database, related to any form.
+            $this->autoSave($methodType, $model, $setVar, $redirectController, $redirectAction, $successMsg, $errorMsg, $passLoggedinUserId, $sendEmail);
     }
 
     /**
@@ -75,9 +94,14 @@ class EmailTemplatesController extends AppController
      */
     public function edit($id = null)
     {
-        $emailTemplate = $this->EmailTemplates->get($id, [
-            'contain' => []
-        ]);
+        $emailTemplate = $this->EmailTemplates->findById($id)->first();
+        
+        //if page not found, redirect back to list view
+        if (empty($emailTemplate)) {
+            $this->Flash->error(__('Template not found'));
+            return $this->redirect(['action' => 'index']);
+        }
+
         if ($this->request->is(['patch', 'post', 'put'])) {
             $emailTemplate = $this->EmailTemplates->patchEntity($emailTemplate, $this->request->getData());
             if ($this->EmailTemplates->save($emailTemplate)) {

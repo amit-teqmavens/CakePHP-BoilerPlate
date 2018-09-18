@@ -72,9 +72,6 @@ class EmailTemplatesTable extends Table
             ->maxLength('code', 10)
             ->allowEmpty('code');
 
-        $validator
-            ->requirePresence('status', 'create')
-            ->notEmpty('status');
 
         return $validator;
     }

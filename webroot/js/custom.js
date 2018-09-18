@@ -27,7 +27,7 @@ $(document).ready(function (){
         rules: {
           name:{required:true,maxlength: 15},
           email: {required: true, email: true},
-          password: {required: true},
+          password: {required: true,minlength: 6},
           confirm_password: {required: true}
        },
        messages: {
@@ -41,7 +41,8 @@ $(document).ready(function (){
             
           },
            password:{
-              required: "Please enter your password."
+              required: "Please enter your password.", 
+              minlength: "Password must contain at least six characters!"
            },
            confirm_password:{
               required:"Please enter your confirmation password."
@@ -49,5 +50,8 @@ $(document).ready(function (){
          
        }      
     });    
+
+
+
 
 }); 

@@ -18,10 +18,11 @@ class CommonComponent extends Component
         if ($emailCode != "" && $toEmail != "") {
             $email_template_obj = TableRegistry::get('EmailTemplates');
             $emailDetails = $email_template_obj->find('all')->where(['code' => $emailCode])->first();
+
             $content = "";
             $subject = "";
 
-            if(count($emailDetails) > 0){
+            if(isset($emailDetails)){
                 $subject = $emailDetails->subject;
 
                 $content = $emailDetails->content;

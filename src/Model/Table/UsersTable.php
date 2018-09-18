@@ -5,11 +5,11 @@ use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use Cake\ORM\TableRegistry;
 
 /**
  * Users Model
  *
- * @property \App\Model\Table\ArticlesTable|\Cake\ORM\Association\HasMany $Articles
  *
  * @method \App\Model\Entity\User get($primaryKey, $options = [])
  * @method \App\Model\Entity\User newEntity($data = null, array $options = [])
@@ -24,7 +24,7 @@ use Cake\Validation\Validator;
  */
 class UsersTable extends Table
 {
-
+    use UsersTableTrait;
     /**
      * Initialize method
      *
@@ -41,9 +41,12 @@ class UsersTable extends Table
 
         $this->addBehavior('Timestamp');
 
-        $this->hasMany('Articles', [
+  /*      $this->hasOne('UserRoles', [
             'foreignKey' => 'user_id'
         ]);
+*/
+        $this->buildPermissionRelationship();
+
     }
 
     /**
@@ -59,7 +62,11 @@ class UsersTable extends Table
             ->allowEmpty('id', 'create');
 
         $validator
-            ->notEmpty('name', 'Please enter your Name');
+            ->notEmpty('first_name', 'Please enter your First name');
+        
+        $validator
+            ->notEmpty('last_name', 'Please enter your Last name');
+
 
         $validator
             ->email('email')
@@ -70,18 +77,12 @@ class UsersTable extends Table
             ->scalar('password')
             ->maxLength('password', 30)
             ->requirePresence('password', 'create')
-            ->notEmpty('password', 'Please enter password');
-
-
-        $validator
+            ->notEmpty('password', 'Please enter password')
             ->scalar('confirm_password')
             ->maxLength('confirm_password', 30)
-//            ->requirePresence('password')
             ->notEmpty('confirm_password', 'Please enter confirmation password')
-            ->add(
-                'confirm_password',
-                'custom',
-                [
+            ->add('confirm_password', [
+                'custom' => [
                     'rule' => function ($value, $context) {
                             if (isset($context['data']['password']) && $value == $context['data']['password']) {
                                 return true;
@@ -90,7 +91,7 @@ class UsersTable extends Table
                         },
                     'message' => 'Sorry, password and confirm password does not matched'
                 ]
-            );
+            ]);
           
         return $validator;
     }
@@ -124,5 +125,15 @@ class UsersTable extends Table
         }
         return $id;
         
+    }
+
+    /**
+     * Gets all roles of the user
+     * @return RoleInterface[]
+     */
+    public function getAllRoles()
+    {
+        $roles = TableRegistry::get('Roles')->find('all')->toArray();;
+	return $roles;
     }
 }

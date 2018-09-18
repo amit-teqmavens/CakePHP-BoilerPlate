@@ -12,7 +12,7 @@
                     <li><?= $this->Html->link('Articles', ['controller'=>'articles']) ?></li>
                     <li><?= $this->Html->link('Users', ['controller'=>'users']) ?></li>
                     <li><?= $this->Html->link('Email Templates', ['controller'=>'emailTemplates']) ?></li>
-                    <li><?= $this->Html->link('Hi '.$user['name'],'#')?></li>
+                    <li><?= $this->Html->link('Hi '.$user['first_name'],'#')?></li>
                     <li><?= $this->Html->link('Logout', ['controller'=>'users', 'action'=>'logout']) ?></li>
                 <?php
                 } else{
