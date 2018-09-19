@@ -55,6 +55,22 @@ class ArticlesController extends AppController
      */ 	
  	public function add()
     {
+        /*$article = $this->Articles->newEntity();
+        if ($this->request->is('post')) { // check if the request is a HTTP POST request.
+            $article = $this->Articles->patchEntity($article, $this->request->getData()); //POST data is available in $this->request->getData()
+
+			// Set the user_id from the session.
+	        $article->user_id = $this->Auth->user('id');
+
+            if ($this->Articles->save($article)) {
+                $this->Flash->success(__('Your article has been saved.')); //Use FlashComponent’s success() method to set a message into the session.
+                return $this->redirect(['action' => 'index']);
+            }
+            $this->Flash->error(__('Unable to add your article.'));
+        }
+        $this->set('article', $article);*/
+
+
             $methodType = 'add';
             $model = 'Articles';
             $redirectController = 'Articles';
