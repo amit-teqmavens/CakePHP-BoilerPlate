@@ -2,17 +2,21 @@
 namespace App\Controller;
 
 use App\Controller\AppController;
-use Cake\Http\Exception\NotFoundException;
 
 /**
- * EmailTemplates Controller
+ * Permissions Controller
  *
- * @property \App\Model\Table\EmailTemplatesTable $EmailTemplates
+ * @property \App\Model\Table\PermissionsTable $Permissions
  *
- * @method \App\Model\Entity\EmailTemplate[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
+ * @method \App\Model\Entity\Role[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
  */
-class EmailTemplatesController extends AppController
+class PermissionsController extends AppController
 {
+    public function initialize()
+    {
+        parent::initialize(); 
+
+    }
     /**
      * Index method
      *
@@ -22,21 +26,16 @@ class EmailTemplatesController extends AppController
     {
         // This function checks for the permission access for this method, based on assigned role. 
         // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
-        $userPerm = $this->getUserAssignedPermissions('view_email_template_list'); 
+        $userPerm = $this->getUserAssignedPermissions('view_permission_list');
+        $permissions = $this->Permissions->find()->toArray();
+        $this->set(compact('permissions'));//uses set() to pass the articles into its template
 
-        $this->loadComponent('Paginator');
-        $emailTemplates = $this->Paginator->paginate($this->EmailTemplates->find());
-        $this->set(compact('emailTemplates'));//uses set() to pass the articles into its template 
-
-        //check auth user or redirect to login
-        if (!$this->Auth->user()) {
-            $this->redirect(['controller'=> 'Users' ,'action'=> 'login']); 
-        }
     }
+
     /**
      * View method
      *
-     * @param string|null $id Email Template id.
+     * @param string|null $id permission id.
      * @return \Cake\Http\Response|void
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
@@ -44,26 +43,19 @@ class EmailTemplatesController extends AppController
     {
         // This function checks for the permission access for this method, based on assigned role. 
         // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
-        $userPerm = $this->getUserAssignedPermissions('view_email_template_detail'); 
+        $userPerm = $this->getUserAssignedPermissions('view_permission_detail');
 
         try {
-            $emailTemplate = $this->EmailTemplates->findById($id)->first();
-            
-            //if page not found, redirect back to list view
-            if (empty($emailTemplate)) {
-                $this->Flash->error(__('Email template not found'));
-                return $this->redirect(['action' => 'index']);
-            }
-
-            $this->set('emailTemplate', $emailTemplate);
+            $permission = $this->Permissions->get($id);
+            $this->set('permission', $permission);
         } catch (\PDOException $e) {
             $message = $e->getMessage();
             $this->Flash->error($message);
-            return $this->redirect(['controller' => 'Users','action' => 'index']);
+            return $this->redirect(['controller' => 'Permissions','action' => 'index']);
         } catch (\Exception $e) {
             $message = $e->getMessage();
             $this->Flash->error($message);
-            return $this->redirect(['controller' => 'Users','action' => 'index']);
+            return $this->redirect(['controller' => 'Permissions','action' => 'index']);
         }
     }
 
@@ -76,24 +68,25 @@ class EmailTemplatesController extends AppController
     {
         // This function checks for the permission access for this method, based on assigned role. 
         // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
-        $userPerm = $this->getUserAssignedPermissions('add_email_template'); 
+        $userPerm = $this->getUserAssignedPermissions('add_permission');
 
-        $emailTemplate = $this->EmailTemplates->newEntity();
+        $permission = $this->Permissions->newEntity();
         if ($this->request->is('post')) {
-            $emailTemplate = $this->EmailTemplates->patchEntity($emailTemplate, $this->request->getData());
-            if ($this->EmailTemplates->save($emailTemplate)) {
-                $this->Flash->success(__('The email template has been saved.'));
-                $this->redirect(['action' => 'index']);
+            $permission = $this->Permissions->patchEntity($permission, $this->request->getData());
+            if ($this->Permissions->save($permission)) {
+                $this->Flash->success(__('The permission has been saved.'));
+
+                return $this->redirect(['action' => 'index']);
             }
-            $this->Flash->error(__('The email template could not be saved. Please, try again.'));
+            $this->Flash->error(__('The permission could not be saved. Please, try again.'));
         }
-        $this->set(compact('emailTemplate'));
+        $this->set(compact('permission'));
     }
 
     /**
      * Edit method
      *
-     * @param string|null $id Email Template id.
+     * @param string|null $id permission id.
      * @return \Cake\Http\Response|null Redirects on successful edit, renders view otherwise.
      * @throws \Cake\Network\Exception\NotFoundException When record not found.
      */
@@ -101,27 +94,22 @@ class EmailTemplatesController extends AppController
     {
         // This function checks for the permission access for this method, based on assigned role. 
         // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
-        $userPerm = $this->getUserAssignedPermissions('edit_email_template'); 
+        $userPerm = $this->getUserAssignedPermissions('edit_permission');
 
         try {
-            $emailTemplate = $this->EmailTemplates->findById($id)->first();
-            
-            //if page not found, redirect back to list view
-            if (empty($emailTemplate)) {
-                $this->Flash->error(__('Template not found'));
-                return $this->redirect(['action' => 'index']);
-            }
-
+            $permission = $this->Permissions->get($id, [
+                'contain' => []
+            ]);
             if ($this->request->is(['patch', 'post', 'put'])) {
-                $emailTemplate = $this->EmailTemplates->patchEntity($emailTemplate, $this->request->getData());
-                if ($this->EmailTemplates->save($emailTemplate)) {
-                    $this->Flash->success(__('The email template has been saved.'));
+                $permission = $this->Permissions->patchEntity($permission, $this->request->getData());
+                if ($this->Permissions->save($permission)) {
+                    $this->Flash->success(__('The permission has been saved.'));
 
                     return $this->redirect(['action' => 'index']);
                 }
-                $this->Flash->error(__('The email template could not be saved. Please, try again.'));
+                $this->Flash->error(__('The permission could not be saved. Please, try again.'));
             }
-            $this->set(compact('emailTemplate'));
+            $this->set(compact('permission'));
         } catch (\PDOException $e) {
             $message = $e->getMessage();
             $this->Flash->error($message);
@@ -130,13 +118,13 @@ class EmailTemplatesController extends AppController
             $message = $e->getMessage();
             $this->Flash->error($message);
             return $this->redirect(['controller' => 'Users','action' => 'index']);
-        }          
+        }             
     }
 
     /**
      * Delete method
      *
-     * @param string|null $id Email Template id.
+     * @param string|null $id permission id.
      * @return \Cake\Http\Response|null Redirects to index.
      * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
      */
@@ -144,17 +132,23 @@ class EmailTemplatesController extends AppController
     {
         // This function checks for the permission access for this method, based on assigned role. 
         // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
-        $userPerm = $this->getUserAssignedPermissions('delete_email_template');
+        $userPerm = $this->getUserAssignedPermissions('delete_permission');
 
-        $this->request->allowMethod(['post', 'delete']);
         try {
-            $emailTemplate = $this->EmailTemplates->get($id);
-            if ($this->EmailTemplates->delete($emailTemplate)) {
-                $this->Flash->success(__('The email template has been deleted.'));
-            } else {
-                $this->Flash->error(__('The email template could not be deleted. Please, try again.'));
+            $this->request->allowMethod(['post', 'delete']);
+            $permission = $this->Permissions->get($id);
+     
+            //if page not found, redirect back to list view
+            if (empty($permission)) {
+                $this->Flash->error(__('Permission not found'));
+                return $this->redirect(['action' => 'index']);
             }
 
+            if ($this->Permissions->delete($permission)) {
+                return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
+            } else {
+                return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
+            }
             return $this->redirect(['action' => 'index']);
         } catch (\PDOException $e) {
             $message = $e->getMessage();
@@ -164,23 +158,22 @@ class EmailTemplatesController extends AppController
             $message = $e->getMessage();
             $this->Flash->error($message);
             return $this->redirect(['controller' => 'Users','action' => 'index']);
-        }            
+        }             
     }
-
 
     /**
      * isAuthorized method
-     * Adding authorization logic for email templates
-     * @return \Cake\Http\Response| redirects back to the referer.
+     * Adding authorization logic for permissions
+     * @return \Cake\Http\Response| permissions back to the referer.
      */
     public function isAuthorized($user)
     {
         $action = $this->request->getParam('action');
         // The add and tags actions are always allowed to logged in users.
-        if (in_array($action, ['index','view'])) {
+        if (in_array($action, ['index','view','delete'])) {
             return true;
         }
 
       
-    }
+    }                                                                                                                                                                                                                                                                                                        
 }

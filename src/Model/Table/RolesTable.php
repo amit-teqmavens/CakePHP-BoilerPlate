@@ -5,6 +5,7 @@ use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use Cake\ORM\TableRegistry;
 
 /**
  * Roles Model
@@ -40,13 +41,6 @@ class RolesTable extends Table
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
-
-/*        $this->belongsToMany('Users', [
-            'foreignKey' => 'role_id',
-            'targetForeignKey' => 'user_id',
-            'joinTable' => 'user_roles'
-        ]);*/
-
         $this->buildPermissionRelationship();
 
     }
@@ -70,5 +64,15 @@ class RolesTable extends Table
             ->notEmpty('role');
 
         return $validator;
+    }
+    
+    /**
+     * Gets all permissions 
+     * @return RoleInterface[]
+     */
+    public function getAllPermissions()
+    {
+        $allPermissions = TableRegistry::get('Permissions')->find('all')->toArray();;
+        return $allPermissions;
     }
 }

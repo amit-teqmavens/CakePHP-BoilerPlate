@@ -56,9 +56,20 @@
                                         }elseif($user['status'] == 2){
                                             $status = 'Inactive';
                                         }
+
+                                        if(!empty($user['roles']) && count($user['roles']) > 0 ){
+                                            $assignedRoles = '';
+                                            foreach($user['roles'] as $key => $role) {
+                                                $assignedRoles = $assignedRoles.','.$role['role'];
+                                            }        
+                                            $userRoles = substr($assignedRoles,1); 
+                                        } else {
+                                            $userRoles = '';
+                                        }
+
                                     ?>
                                     <dl class="dl-horizontal">
-                                        <dt><?= __('Status') ?>:</dt> <dd><span class="label label-primary"><?= h($status) ?></span></dd>
+                                        <dt><?= __('Role') ?>:</dt> <dd><span class="label label-primary"><?= h(ucfirst($userRoles)) ?></span></dd>
                                     </dl>
 
                                     <dl class="dl-horizontal">
@@ -67,6 +78,10 @@
                                     </dl>
                                 </div>
                                 <div class="col-lg-6">
+                                    <dl class="dl-horizontal">
+                                        <dt><?= __('Status') ?>:</dt> <dd><span class="label label-primary"><?= h($status) ?></span></dd>
+                                    </dl>
+
                                     <dl class="dl-horizontal">
                                         <dt><?= __('Created') ?>:</dt> <dd><?= h($user->created) ?></dd>
                                     </dl>

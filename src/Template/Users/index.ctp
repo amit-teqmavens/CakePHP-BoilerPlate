@@ -78,7 +78,7 @@
                                                 <td class = "capitalize"><?= ucfirst(h($user->first_name))." ".h($user->last_name)?></td>
                                                 <td><?= h($user->email) ?></td>
                                                 <td><?= ucfirst(h($userRole)) ?></td>
-                                                <td><b><?php echo $this->Html->link($status,'javascript:void(0)',['_full' => false,'class' => "mngstatus".' '.$statusClass.' '."mngstatus_".$user['id'],'id' =>$user['id']] ); ?></b></td>
+                                                <td><b><?php echo $this->Html->link($status,'javascript:void(0)',['_full' => false,'class' => "manage_status".' '.$statusClass.' '."manage_status_".$user['id'],'id' =>$user['id']] ); ?></b></td>
                                                 <td><?= h($dateCreatedFormat) ?></td>
                                                 <td class="actions">
                                                     <?= $this->Html->link(__(''), ['action' => 'view', $user->id],['data-toggle' =>'tooltip','data-placement' => 'bottom', 'title' =>'Detail View','class' => 'btn btn-info btn-circle fa fa-paste']) ?>

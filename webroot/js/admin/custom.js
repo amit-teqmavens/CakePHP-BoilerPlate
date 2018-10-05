@@ -154,13 +154,27 @@ $(document).ready(function (){
     }); 
 
 
+    /*
+     * Function for validate admin add/edit permission.
+     * 
+     */
+    $("#Admin-AddPermission").validate({    
+        rules: {
+          role:{required:true},
+       },
+       messages: {
+          role:{
+            required: "Please enter Permission title.", 
+          },
+       }      
+    }); 
 
     /*
      * Function for datatable with button options.
      * 
      */
     $('.dataTables-list-buttons').DataTable({
-        pageLength: 25,
+        pageLength: 10,
         responsive: true,
         dom: '<"html5buttons"B>lTfgitp',
         buttons: [
@@ -168,14 +182,14 @@ $(document).ready(function (){
             {extend: 'excel', title: 'Downloaded File'},
             {extend: 'pdf', title: 'Downloaded File'},
             {extend: 'print',
-             customize: function (win){
-                    $(win.document.body).addClass('white-bg');
-                    $(win.document.body).css('font-size', '10px');
+              customize: function (win){
+                      $(win.document.body).addClass('white-bg');
+                      $(win.document.body).css('font-size', '10px');
 
-                    $(win.document.body).find('table')
-                            .addClass('compact')
-                            .css('font-size', 'inherit');
-            }
+                      $(win.document.body).find('table')
+                              .addClass('compact')
+                              .css('font-size', 'inherit');
+              }
             }
         ]
 
@@ -186,7 +200,7 @@ $(document).ready(function (){
      * 
      */
     $('.dataTables-list').DataTable({
-        pageLength: 25,
+        pageLength: 10,
         responsive: true,
         dom: '<"html5buttons"B>lTfgitp',
         buttons: [
@@ -199,8 +213,7 @@ $(document).ready(function (){
      * Function to show confirmation alert for the data deletion
      * 
      */
-    $('.deleteData').click(function () {
-
+    $('body').on('click', '.deleteData', function(){     
       var passedString = $(this).attr('id');
       var res = passedString.split("_");
       var model = res[0]; //model to be called
@@ -234,5 +247,45 @@ $(document).ready(function (){
         });
     });
 
+    /*
+     * Function for manage user status.
+     * 
+     */
+    $('body').on('click', '.manage_status', function(){
+        var user_id = $(this).attr('id');
+        var status = $(this).text();
+       swal({
+            title: "Are you sure?",
+            text: "You want to change status of this user!",
+            type: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#DD6B55",
+            confirmButtonText: "Yes, change it!",
+            closeOnConfirm: false
+        }, function () {
+            $.ajax({
+                method: "POST",
+                url: "users/manage_status/" + user_id,
+                success:function(data) {
+                  var data = $.parseJSON(data);
+                  if(data['status'] == 0) {
+                      if(status == 'Active'){
+                        $(".manage_status_"+user_id).removeClass("btn-primary");  
+                        $(".manage_status_"+user_id).addClass("btn-warning");  
+                        $(".manage_status_"+user_id).text("Inactive");  
+                      }else{
+                        $(".manage_status_"+user_id).removeClass("btn-warning");  
+                        $(".manage_status_"+user_id).addClass("btn-primary");
+                        $(".manage_status_"+user_id).text("Active");  
+                      }                    
+                      
+                      sweetAlert("Good...", "Updated successfully.", "success");    
+                  }else{
+                      sweetAlert("Oops...", "Something went wrong!", "error");
+                  } 
+                }
+            });
+        });
+    });
 
 }); 

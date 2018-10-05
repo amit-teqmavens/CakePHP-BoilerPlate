@@ -6,6 +6,10 @@ use Cake\Http\Exception\NotFoundException;
 
 class ArticlesController extends AppController
 {
+    public function initialize()
+    {
+        parent::initialize();
+    }
      /**
      * Index method
      * It fetches a paginated set of articles from the database, using the Articles Model
@@ -14,16 +18,18 @@ class ArticlesController extends AppController
      */
     public function index()
     {
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('view_page_list'); 
+
         $this->loadComponent('Paginator');
         $articles = $this->Paginator->paginate($this->Articles->find());
         $this->set(compact('articles'));//uses set() to pass the articles into its template 
 
         //check auth user or redirect to login
-        if ($this->Auth->user()) {
-            
-        }else{
-            $this->redirect("/");
-        } 
+        if (!$this->Auth->user()) {
+            $this->redirect(['controller'=> 'Users' ,'action'=> 'login']); 
+        }
     }
 
     /**
@@ -35,17 +41,31 @@ class ArticlesController extends AppController
      */
 	public function view($slug = null)
 	{
-		//findBySlug() method allows us to create a basic query that finds articles by a given slug
-	    $article = $this->Articles
-	    		->findBySlug($slug)
-	    		->first(); 
-        
-        //if page not found, redirect back to list view
-        if(empty($article)) {
-            $this->Flash->error(__('Article not found'));
-            return $this->redirect(['action' => 'index']);
-        }             
-	    $this->set(compact('article')); 
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('view_page_detail'); 
+
+       try {
+    		//findBySlug() method allows us to create a basic query that finds articles by a given slug
+    	    $article = $this->Articles
+    	    		->findBySlug($slug)
+    	    		->first(); 
+            
+            //if page not found, redirect back to list view
+            if(empty($article)) {
+                $this->Flash->error(__('Page not found'));
+                return $this->redirect(['action' => 'index']);
+            }             
+    	    $this->set(compact('article')); 
+        } catch (\PDOException $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        }
 	}
 
     /**
@@ -55,34 +75,21 @@ class ArticlesController extends AppController
      */ 	
  	public function add()
     {
-        /*$article = $this->Articles->newEntity();
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('add_page'); 
+
+        $article = $this->Articles->newEntity();
         if ($this->request->is('post')) { // check if the request is a HTTP POST request.
             $article = $this->Articles->patchEntity($article, $this->request->getData()); //POST data is available in $this->request->getData()
 
-			// Set the user_id from the session.
-	        $article->user_id = $this->Auth->user('id');
-
             if ($this->Articles->save($article)) {
-                $this->Flash->success(__('Your article has been saved.')); //Use FlashComponent’s success() method to set a message into the session.
-                return $this->redirect(['action' => 'index']);
+                $this->Flash->success(__('Page has been saved.')); //Use FlashComponent’s success() method to set a message into the session.
+                $this->redirect(['action' => 'index']);
             }
-            $this->Flash->error(__('Unable to add your article.'));
+            $this->Flash->error(__('Unable to add page.'));
         }
-        $this->set('article', $article);*/
-
-
-            $methodType = 'add';
-            $model = 'Articles';
-            $redirectController = 'Articles';
-            $redirectAction = 'index';
-            $successMsg = 'You article has been saved.';
-            $errorMsg = 'Unable to add your article. Please, try again.';
-            $setVar = 'article';
-            $passLoggedinUserId = 'yes';
-            $sendEmail = 'no';
-            
-            // This is a common method add in AppController, used for adding/saving data into database, related to any form.
-            $this->autoSave($methodType, $model, $setVar, $redirectController, $redirectAction, $successMsg, $errorMsg, $passLoggedinUserId, $sendEmail);
+        $this->set('article', $article);
 
     }
 
@@ -95,28 +102,42 @@ class ArticlesController extends AppController
      */
     public function edit($slug)
 	{
-        //findBySlug() method allows us to create a basic query that finds articles by a given slug
-        $article = $this->Articles
-                ->findBySlug($slug)
-                ->first(); 
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('edit_page'); 
         
-        //if page not found, redirect back to list view
-        if(empty($article)) {
-            $this->Flash->error(__('Article not found'));
-            return $this->redirect(['action' => 'index']);
-        }
+        try {
+            //findBySlug() method allows us to create a basic query that finds articles by a given slug
+            $article = $this->Articles
+                    ->findBySlug($slug)
+                    ->first(); 
+            
+            //if page not found, redirect back to list view
+            if(empty($article)) {
+                $this->Flash->error(__('Page not found'));
+                return $this->redirect(['action' => 'index']);
+            }
 
-	    if ($this->request->is(['post', 'put'])) {
-	        $this->Articles->patchEntity($article, $this->request->getData());
+    	    if ($this->request->is(['post', 'put'])) {
+    	        $this->Articles->patchEntity($article, $this->request->getData());
 
-	        if ($this->Articles->save($article)) {
-	            $this->Flash->success(__('Your article has been updated.'));
-	            return $this->redirect(['action' => 'index']);
-	        }
-	        $this->Flash->error(__('Unable to update your article.'));
-	    }
+    	        if ($this->Articles->save($article)) {
+    	            $this->Flash->success(__('Your article has been updated.'));
+    	            return $this->redirect(['action' => 'index']);
+    	        }
+    	        $this->Flash->error(__('Unable to update page.'));
+    	    }
 
-	    $this->set('article', $article);
+    	    $this->set('article', $article);
+        } catch (\PDOException $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        }    
 	}
 
     /**
@@ -128,24 +149,37 @@ class ArticlesController extends AppController
      */
 	public function delete($id = null)
 	{
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('delete_page'); 
+
 	    $this->request->allowMethod(['post', 'delete']); 
 
-        $article = $this->Articles->get($id);
-        pr($article); die;
+        try {
+            $article = $this->Articles->get($id);
 
-        //if page not found, redirect back to list view
-        if(empty($article)) {
-            $this->Flash->error(__('Article not found'));
-            return $this->redirect(['action' => 'index']);
-        }
+            //if page not found, redirect back to list view
+            if(empty($article)) {
+                $this->Flash->error(__('Page not found'));
+                return $this->redirect(['action' => 'index']);
+            }
 
-        if ($this->Articles->delete($article)) {
-            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
-        } else {
-            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
-        }
-                    
-        return $this->redirect(['controller' => 'articles','action' => 'index']);        
+            if ($this->Articles->delete($article)) {
+                return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
+            } else {
+                return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
+            }
+                        
+            return $this->redirect(['controller' => 'articles','action' => 'index']);      
+        } catch (\PDOException $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        }                 
 	}
 
 
@@ -162,11 +196,6 @@ class ArticlesController extends AppController
 	        return true;
 	    }
 
-	    // All other actions require a slug.
-	    /*$slug = $this->request->getParam('pass.0');
-	    if (!$slug) {
-	        return false;
-	    }*/
 	}
 
 }

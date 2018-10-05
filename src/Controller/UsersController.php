@@ -24,12 +24,14 @@ class UsersController extends AppController
 
         $this->Auth->allow();
         $this->loadComponent('Common');
+    
 
         $action = $this->request->getParam('action');
         // The add and tags actions are always allowed to logged in users.
         if (in_array($action, ['add', 'roles'])) {
-            return true;
-        }
+            //return true;
+        } 
+
     }
 
      /**
@@ -40,18 +42,19 @@ class UsersController extends AppController
      */
     public function index()
     {
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('view_user_list'); 
 
+        // Get all users, in association with the Roles table.
         $users = $this->paginate($this->Users->find('all')->contain(['Roles']));
         $this->set(compact('users'));
         $this->set('_serialize', ['users']);
 
         //check auth user or redirect to login
-        if ($this->Auth->user()) {
-            
-        }else{
-//            $this->redirect("/");
+        if (!$this->Auth->user()) {
             $this->redirect(['controller'=> 'Users' ,'action'=> 'login']); 
-        }   
+        }
     }
 
     /**
@@ -63,15 +66,25 @@ class UsersController extends AppController
      */
     public function view($id = null)
     {
-        $user = $this->Users->findById($id)->first();
-        
-        //if page not found, redirect back to list view
-        if (empty($user)) {
-            $this->Flash->error(__('User not found'));
-            return $this->redirect(['action' => 'index']);
-        }
 
-        $this->set('user', $user);
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('view_user_detail'); 
+
+        try {
+            $user = $this->Users->get($id, [
+                'contain' => ['Roles']
+            ]);
+            $this->set('user', $user);    
+        } catch (\PDOException $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        }
     }
 
     /**
@@ -82,65 +95,58 @@ class UsersController extends AppController
     public function add()
     {
 
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('add_user'); 
 
-        /*$user = $this->Users->newEntity();
-        if ($this->request->is('post')) {
-            $user = $this->Users->patchEntity($user, $this->request->getData());
-            if ($this->Users->save($user)) {
-                $this->Flash->success(__('The user has been saved.'));
-
-                return $this->redirect(['action' => 'index']);
-            }
-            $this->Flash->error(__('The user could not be saved. Please, try again.'));
-        }
-        $this->set(compact('user'));
-        */
- 
-
-         // Get all roles from roles table and setting it for roles dropdown
+        // Get all roles from roles table and setting it for roles dropdown
         $allRoles = $this->Users->getAllRoles();
         $this->set(compact('allRoles')); 
 
+        $user = $this->Users->newEntity();
+        if ($this->request->is('post')) {
+            $user = $this->Users->patchEntity($user, $this->request->getData());
+            if ($response = $this->Users->save($user)) {
 
+                //************Sending Email to client************
 
-        $methodType = 'add';
-        $model = 'Users';
-        $redirectController = 'Users';
-        $redirectAction = 'index';
-        $successMsg = 'The user has been saved.';
-        $errorMsg = 'The user could not be saved. Please, try again.';
-        $setVar = 'user';
-        $passLoggedinUserId = 'no';
+                /****** set these variables if you want to send an email ******/
+                $emailCode = 'REG001';
+                $emailSubject = 'Welcome to the Website';
 
-        /****** set these variables if you want to send an email ******/
-        $sendEmail = 'yes';
-        $EmailCode = 'REG001';
-        $EmailSubject = 'Welcome to the Website';
-        /****** set these variables if you want to send an email ******/
+                if($response->email!="") {
+                    $emailContent = array(
+                        '{SUBJECT}' => $emailSubject,
+                        '{NAME}' => ucwords($response->name),
+                        '{USER_EMAIL}' => $response->email,
+                        '{USER_PASSWORD}' => $this->request->data['password'],
+                        '{ACTIVATION_LINK}' => ''
+                    );
+                    $toEmail = $response->email;
 
-        // This is a common method add in AppController, used for adding/saving data into database, related to any form.
-        $response = $this->autoSave($methodType, $model, $setVar, $redirectController, $redirectAction, $successMsg, $errorMsg, $passLoggedinUserId, $sendEmail, $EmailCode, $EmailSubject);
-
-        //************Store data into associated table 'UserRoles' table************
-        if(isset($response) && $response!="") {
-                if(!empty($this->request->data['role'])){
-
-                    $userRolesTable = TableRegistry::get('UserRoles');
-                    $userData = $userRolesTable->newEntity();
-                    $userData['user_id'] = $response['id'];
-                    $userData['role_id'] = $response['role'];
-
-                    if($userRolesTable->save($userData)){
-                        $this->Flash->success(__($successMsg));                        
-                    }else {
-                        $this->Flash->error(__($errorMsg));
-                    }
-                    $this->redirect(['controller'=> $redirectController ,'action'=> $redirectAction]); 
+                    //Common function added in Common component.
+                    $this->Common->sendEmail($emailCode, $toEmail, $emailContent);        
                 }
+
+                //************Store data into joined table 'UserRoles' table************
+                if(isset($response) && $response!="") {
+                        if(!empty($this->request->data['role'])){
+
+                            $userRolesTable = TableRegistry::get('UserRoles');
+                            $userData = $userRolesTable->newEntity();
+                            $userData['user_id'] = $response['id'];
+                            $userData['role_id'] = $response['role'];
+
+                            if($userRolesTable->save($userData)){
+                                $this->Flash->success(__('The user has been saved.'));
+                            }else {
+                                $this->Flash->error(__('The user could not be saved. Please, try again.'));
+                            }
+                            $this->redirect(['action' => 'index']);                        }
+                }
+            }
         }
-
-
-
+        $this->set(compact('user'));
     }
 
     /**
@@ -152,37 +158,48 @@ class UsersController extends AppController
      */
     public function edit($id = null)
     {
-        //$user = $this->Users->findById($id)->first();
-        //find data of selected user, from associated tables as well
-        $user = $this->Users->get($id, [
-                        'contain' => ['Roles']
-                    ]);
 
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('edit_user'); 
+        
+        try {
+            //find data of selected user, from associated tables as well
+            $user = $this->Users->get($id, [
+                            'contain' => ['Roles']
+                        ]);
 
-        //if page not found, redirect back to list view
-        if (empty($user)) {
-            $this->Flash->error(__('User not found'));
-            return $this->redirect(['action' => 'index']);
-        }
-
-        if ($this->request->is(['patch', 'post', 'put'])) {
-            $user = $this->Users->patchEntity($user, $this->request->getData());
-            if ($this->Users->save($user)) {
-                $this->Flash->success(__('The user has been saved.'));
-
+            //if page not found, redirect back to list view
+            if (empty($user)) {
+                $this->Flash->error(__('User not found'));
                 return $this->redirect(['action' => 'index']);
             }
-            $this->Flash->error(__('The user could not be saved. Please, try again.'));
-        }
 
-         // Get all roles from roles table and setting it for roles dropdown
-        $allRoles = $this->Users->getAllRoles();
-        
-        //get the selected role id
-        $selectedRole = $user['roles'];
+            if ($this->request->is(['patch', 'post', 'put'])) {
+                $user = $this->Users->patchEntity($user, $this->request->getData());
+                if ($this->Users->save($user)) {
+                    $this->Flash->success(__('The user has been saved.'));
 
+                    return $this->redirect(['action' => 'index']);
+                }
+                $this->Flash->error(__('The user could not be saved. Please, try again.'));
+            }
 
-        $this->set(compact('user','allRoles', 'selectedRole'));
+             // Get all roles from roles table and setting it for roles dropdown
+            $allRoles = $this->Users->getAllRoles();
+            
+            //get the selected role id
+            $selectedRole = $user['roles'];
+            $this->set(compact('user','allRoles', 'selectedRole'));
+        } catch (\PDOException $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        }   
     }
 
     /**
@@ -194,21 +211,35 @@ class UsersController extends AppController
      */
     public function delete($id = null)
     {
-        $this->request->allowMethod(['post', 'delete']);
-        $user = $this->Users->get($id);
- 
-        //if page not found, redirect back to list view
-        if (empty($user)) {
-            $this->Flash->error(__('User not found'));
-            return $this->redirect(['action' => 'index']);
-        }
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('delete_user'); 
 
-        if ($this->Users->delete($user)) {
-            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
-        } else {
-            return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
-        }
-        return $this->redirect(['action' => 'index']);
+        $this->request->allowMethod(['post', 'delete']);
+        try {
+            $user = $this->Users->get($id);
+     
+            //if page not found, redirect back to list view
+            if (empty($user)) {
+                $this->Flash->error(__('User not found'));
+                return $this->redirect(['action' => 'index']);
+            }
+
+            if ($this->Users->delete($user)) {
+                return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'deleted'))); die;
+            } else {
+                return $this->response->withType("application/json")->withStringBody(json_encode(array('status' => 'error'))); die;
+            }
+            return $this->redirect(['action' => 'index']);
+        } catch (\PDOException $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $this->Flash->error($message);
+            return $this->redirect(['controller' => 'Users','action' => 'index']);
+        }               
     }
 
 
@@ -219,6 +250,10 @@ class UsersController extends AppController
      */
     public function login()
     {
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('user_login'); 
+
         $this->viewBuilder()->layout('login'); 
         if ($this->request->is('post')) {
             try {
@@ -259,7 +294,7 @@ class UsersController extends AppController
                     $this->Flash->error('Your email or password is incorrect.');
                 }   
 
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 $message = $e->getMessage();
                 $this->Flash->error($message);
             }  
@@ -274,6 +309,10 @@ class UsersController extends AppController
      */
     public function register()
     {
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('user_login');
+
         $this->viewBuilder()->layout('login'); 
         $user = $this->Users->newEntity();
         if ($this->request->is('post')) {
@@ -283,9 +322,6 @@ class UsersController extends AppController
             $user = $this->Users->patchEntity($user, $this->request->getData());
 
             $errors = $user->errors();        
-        //  pr($errors); die;
-           // $errors = $user->errors(); 
-          // pr($errors); dd('asdasdas'); 
             if($result = $this->Users->save($user)){
                                 
                 /******** Code for sending welcome email along with activation link*******/
@@ -367,6 +403,31 @@ class UsersController extends AppController
 
         }  
 
+    }
+
+
+    /**
+     * manage_status method
+     * Function to manage the user status
+     * @return \Cake\Http\Response|null Redirects on login page.
+     */
+    public function manage_status($id){
+        $usrEnt = $this->Users->newEntity();
+        if(isset($id) &&  !empty($id)) {
+            $usrEnt = $this->Users->get($id);
+            $usrEnt['status'] = ($usrEnt['status'] == 1 ? 2 : 1);
+            if($this->Users->save($usrEnt)){
+                echo json_encode(array('status' => 0,'msg' => 'Status updated successfully.'));
+                die;
+            }else{
+                echo json_encode(array('status' => 1,'msg' => 'Unable to update status.'));
+                die;
+            }
+        }else{
+            echo json_encode(array('status' => 1,'msg' => 'Unable to update status.'));
+            die;
+        }    
+       
     }
 
     /**

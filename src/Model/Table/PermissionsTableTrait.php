@@ -8,24 +8,18 @@ use Cake\Cache\Cache;
 use Cake\Core\Configure;
 use Cake\ORM\Table;
 
-trait RolesTableTrait
+trait PermissionsTableTrait
 {
     public function buildPermissionRelationship()
     {
-        $this->belongsToMany('Users', [
-            'className' => 'Users',
-            'foreignKey' => 'role_id',
-            'targetForeignKey' => 'user_id',
-            'joinTable' => 'user_roles'
-        ]);
-
-        $this->belongsToMany('Permissions', [
-            'className' => 'Permissions',
-            'foreignKey' => 'role_id',
-            'targetForeignKey' => 'permission_id',
+        $this->belongsToMany('Roles', [
+            'className' => 'Roles',
+            'foreignKey' => 'permission_id',
+            'targetForeignKey' => 'role_id',
             'joinTable' => 'roles_permissions'
         ]);
         $this->addBehavior('Timestamp');
+
     }
 
     /**
@@ -34,6 +28,6 @@ trait RolesTableTrait
      */
     public static function refreshCache($userId)
     {
-        Cache::delete(sprintf(Constants::CACHE_ROLES, $userId));
+        Cache::delete(sprintf(Constants::CACHE_PERMISSIONS, $userId));
     }
 }
