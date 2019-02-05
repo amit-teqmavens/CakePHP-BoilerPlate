@@ -31,6 +31,27 @@ class ArticlesController extends AppController
             $this->redirect(['controller'=> 'Users' ,'action'=> 'login']); 
         }
     }
+ /**
+     * Index method
+     * It fetches a paginated set of articles from the database, using the Articles Model
+     * @return \Cake\Http\Response|void
+     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
+     */
+    public function demo()
+    {
+        // This function checks for the permission access for this method, based on assigned role. 
+        // There should be a 'slug' matching to the parameter passed in this method, in the 'permissions' table.
+        $userPerm = $this->getUserAssignedPermissions('view_page_list'); 
+
+        $this->loadComponent('Paginator');
+        $articles = $this->Paginator->paginate($this->Articles->find());
+        $this->set(compact('articles'));//uses set() to pass the articles into its template 
+
+        //check auth user or redirect to login
+        if (!$this->Auth->user()) {
+            $this->redirect(['controller'=> 'Users' ,'action'=> 'login']); 
+        }
+    }
 
     /**
      * View method

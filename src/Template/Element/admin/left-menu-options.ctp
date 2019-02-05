@@ -104,3 +104,15 @@
         </li>
     </ul>
 </li>
+
+<li class = "<?php echo $template_cls; ?>">
+    <a href="javascript:void(0)"><i class="fa fa-question"></i><span class="nav-label">FAQ Management</span><span class="fa arrow"></span></a>
+     <ul class="nav nav-second-level collapse">
+        <li class="<?php echo ($controller == 'articles' && $action == 'index' || $action == 'view')?'active' :'' ?>" >
+            <?php echo $this->Html->Link('FAQ List',array('controller' =>'faq','action'=> 'index'),array('escape'=>false)); ?>                         
+        </li>
+         <li class="<?php echo ($controller == 'articles' && $action == 'add')?'active' :'' ?>">
+            <?php echo $this->Html->Link('Add FAQ',array('controller' =>'faq','action'=> 'add'),array('escape'=>false)); ?>                    
+        </li >
+    </ul>
+</li>
