@@ -1,12 +1,16 @@
 version = 1
 
 exclude_patterns = [
-  "**/vendor/**"
+  "**/vendor/**",
+  "tmp/**"
 ]
 
 [[analyzers]]
 name = "php"
 enabled = true
+
+[analyzers.meta]
+  bootstrap_files = ["config/bootstrap.php"]
 
 [[analyzers]]
 name = "shell"
